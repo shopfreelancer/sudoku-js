@@ -1,0 +1,28 @@
+{
+  "name": "sudoku-js",
+  "version": "1.0.0",
+  "description": "a js sudoku solver for node.js",
+  "main": "sudoku.js",
+  "dependencies": {
+    "jasmine-node": "^1.14.5"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "jasmine"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shopfreelancer/sudoku-js.git"
+  },
+  "keywords": [
+    "sudoku",
+    "node",
+    "javascript"
+  ],
+  "author": "Hans-Christian Psaar",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/shopfreelancer/sudoku-js/issues"
+  },
+  "homepage": "https://github.com/shopfreelancer/sudoku-js#readme"
+}

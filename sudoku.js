@@ -1,4 +1,4 @@
-var SudokuSolving = (function () {
+module.exports.SudokuSolving = (function () {
 
     const digits   = '123456789';
     const rows     = 'ABCDEFGHI';
@@ -17,18 +17,27 @@ var SudokuSolving = (function () {
     });
 
     /**
-    * Main function to start the solving process. 
+    * Main function to start the solving process.
+    * Sudoku grid can be either String or Array of 81 numbers
     *
-    * @param String
+    * @param String | Array
+    * @return String | Array
     */
-    function parseGrid(grid){
+    function solveGrid(grid){
+        let gridArray = [];
         
         if(!isGridValid(grid)){
             throw new Error("Not a valid grid");
         }
 
+        if(grid instanceof Array){
+            gridArray = grid;
+        } else {
+            gridArray = grid.split("");
+        }
+
         // this is where we start. the board with 81 fields and the puzzle with the values from the grid variable
-        let gridValues = mapGridToSquares(grid);
+        let gridValues = mapGridToSquares(gridArray);
 
         // map grid values to the real board
         gridValues.forEach(function(gridItem,index){
@@ -36,7 +45,12 @@ var SudokuSolving = (function () {
                 assign(gridItem.name, gridItem.value,index);
             }
         })
-        return parseBoardToString();
+        
+        if(grid instanceof Array){
+            return parseBoardToArray();
+        } else {
+            return parseBoardToString();
+        }
     } 
     
     /**
@@ -44,7 +58,7 @@ var SudokuSolving = (function () {
     */
     function isGridValid(grid){
         let isnum = /^\d+$/.test(grid);
-        if(grid.length !== squares.length || !isnum){
+        if(grid.length === 0 || grid.length !== squares.length){
             return false;
         }
         return true;
@@ -103,7 +117,7 @@ var SudokuSolving = (function () {
     * Get the 3 unit arrays for square s e.g. "A1"
     */
     function getUnitsOfSquare(s){
-        unitsOfSquare = [];
+        let unitsOfSquare = [];
         unitlist.forEach(function(unit){
             if(unit.includes(s)){
                 let unitWithModel = [];
@@ -143,17 +157,32 @@ var SudokuSolving = (function () {
             boardString += square.value;
         });
 
-        return boardString
+        return boardString;
+    }
+    
+    /**
+    * Take board array with all 81 square models and parse their values to array.
+    * Like the inital grid string we started with
+    */
+    function parseBoardToArray(){
+        let boardArray = [];
+
+        board.forEach(function(square){
+            boardArray.push(parseInt(square.value));
+        });
+
+        return boardArray;
     }
 
     /**
     * Use inital grid values and assign them to squares.
+    * @param Array
     */
-    function mapGridToSquares(grid){
+    function mapGridToSquares(gridArray){
         var gridValues = squares.map(function(square,index){
             let squareModel = {
                 name : square,
-                value : grid[index],
+                value : gridArray[index],
                 key : index
             };
             return squareModel;
@@ -187,7 +216,7 @@ var SudokuSolving = (function () {
 
         if(board[squareIndex].value.length === 1){
             let d2 = board[squareIndex].value;
-            peers = getPeersOfSquare(square);
+            let peers = getPeersOfSquare(square);
 
             peers.forEach(function(peer){
                 eliminate(peer.name, d2, peer.key);
@@ -198,7 +227,7 @@ var SudokuSolving = (function () {
         /**
         * Now iterate through all units of the square. Delete the digit from them
         */
-        unitsOfSquare = getUnitsOfSquare(square);
+        let unitsOfSquare = getUnitsOfSquare(square);
         var dplaces = [];
         unitsOfSquare.forEach(function(unit){
             dplaces = [];
@@ -236,12 +265,6 @@ var SudokuSolving = (function () {
     * Revealing module pattern. public access for method parseGrid
     */
     return {
-        parseGrid : parseGrid
+        solveGrid : solveGrid
     };
-
 })();
-
-var grid = '130050040008010500460000012070502080000603000040109030250000098001020600080060020';
-
-var solution = SudokuSolving.parseGrid(grid);
-console.log(solution);
