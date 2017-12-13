@@ -1,9 +1,9 @@
-var digits   = '123456789';
-var rows     = 'ABCDEFGHI';
-var cols     = digits;
-var squares  = cross(rows, cols);
+const digits   = '123456789';
+const rows     = 'ABCDEFGHI';
+const cols     = digits;
+const squares  = cross(rows, cols);
 
-var grid = '030050040008010500460000012070502080000603000040109030250000098001020600080060020';
+const grid = '030050040008010500460000012070502080000603000040109030250000098001020600080060020';
 
 var unitlist = generateUnitlist();
 
@@ -15,7 +15,6 @@ var board = squares.map(function(square,index){
     };
     return field;
 });
-
 
 /**
 * Cross product of 2 arrays or strings
@@ -106,9 +105,21 @@ function parseGrid(grid){
     // map grid values to the real board
     gridValues.forEach(function(gridItem,index){
         if(gridItem.value > 0){
-            assign(values, gridItem.name, gridItem.value,index);
+            assign(gridItem.name, gridItem.value,index);
         }
     })
+    
+    return parseBoardToString();
+}
+
+function parseBoardToString(){
+    let boardString = '';
+    
+    board.forEach(function(square){
+        boardString += square.value;
+    });
+    
+    return boardString
 }
 
 
@@ -128,13 +139,13 @@ function mapGridToSquares(grid){
 * assign one number - which is the solution for a field - to the field
 * then call
 */
-function assign(values, square, digit, squareIndex){
+function assign(square, digit, squareIndex){
     
     // this is important. the temporary variable are all other digits, except the one we are looking for
     var other_values = board[squareIndex].value.replace(digit,'');
 
     for(let i=0; i<other_values.length; i++){
-        eliminate(values,square,other_values[i],squareIndex)
+        eliminate(square,other_values[i],squareIndex)
     }
     /**
        if all(eliminate(values, s, d2) for d2 in other_values):
@@ -142,20 +153,19 @@ function assign(values, square, digit, squareIndex){
     else:
         return False
     */
-    return values;
 }
 
 /**
 * delete all numbers except the 
 */
-function eliminate(values, square, digit, squareIndex){
+function eliminate(square, digit, squareIndex){
 
     /**
          if d not in values[s]:
         return values ## Already eliminated
     */
     if(board[squareIndex].value.indexOf(digit) === -1){
-        return values;
+        return;
     }
     
     // values[s] = values[s].replace(d,'')
@@ -185,7 +195,7 @@ function eliminate(values, square, digit, squareIndex){
         peers = getPeersOfSquare(square);
         
         peers.forEach(function(peer){
-            eliminate(values, peer.name, d2, peer.key);
+            eliminate(peer.name, d2, peer.key);
         })
         return false;
     }
@@ -219,12 +229,12 @@ function eliminate(values, square, digit, squareIndex){
         })
         // only one possible solution
         if(dplaces.length === 1){
-            assign(values, dplaces[0].name, digit, dplaces[0].key);
+            assign(dplaces[0].name, digit, dplaces[0].key);
         }
     })
   
     
-    return values;
+    return;
 
 }
 
@@ -241,7 +251,6 @@ function getModelForSquareName(squareName){
 }
 
 var unitlist = generateUnitlist();
+var solution = parseGrid(grid);
 
-parseGrid(grid);
-console.log(board);
-
+console.log(solution);
