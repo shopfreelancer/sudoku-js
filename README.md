@@ -12,5 +12,5 @@ The original article explains what the code does. In goes a representation of th
 
 All squares of the board get assigned as possible values the numbers / digits (123...9). Then the grid values are getting assigned to the board. All other numbers except the correct ones are getting deleted from the square, its peers and its units.
 
-The file is intended for use on the console.
-node ../sudoku.js 
+The file is intended for use with node.js
+node examples.js 
