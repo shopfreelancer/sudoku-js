@@ -1,5 +1,5 @@
 module.exports.SudokuSolving = (function () {
-
+    
     const digits   = '123456789';
     const rows     = 'ABCDEFGHI';
     const cols     = digits;
@@ -19,9 +19,8 @@ module.exports.SudokuSolving = (function () {
     /**
     * Main function to start the solving process.
     * Sudoku grid can be either String or Array of 81 numbers
-    *
-    * @param String | Array
-    * @return String | Array
+    * @param {String | Array} grid 
+    * @return {String | Array} solution
     */
     function solveGrid(grid){
         let gridArray = [];
@@ -55,9 +54,10 @@ module.exports.SudokuSolving = (function () {
     
     /**
     * Simple helper function if grid string contains 81 numbers
+    * @param {String | Array} grid 
+    * @return {Bool}   
     */
     function isGridValid(grid){
-        let isnum = /^\d+$/.test(grid);
         if(grid.length === 0 || grid.length !== squares.length){
             return false;
         }
@@ -67,6 +67,7 @@ module.exports.SudokuSolving = (function () {
 
     /**
     * Helper function. Cross product of 2 arrays or strings
+    * @param {String | Array} grid
     * @return Array
     */
     function cross(A,B){
@@ -81,6 +82,7 @@ module.exports.SudokuSolving = (function () {
     
     /**
     * Generates list of all Units
+    * @return {Array}
     */
     function generateUnitlist(){
 
@@ -114,7 +116,9 @@ module.exports.SudokuSolving = (function () {
     }
 
     /**
-    * Get the 3 unit arrays for square s e.g. "A1"
+    * Get the 3 unit arrays for square
+    * @param {String} s Name of Square e.g. "A1"
+    * @return Array
     */
     function getUnitsOfSquare(s){
         let unitsOfSquare = [];
@@ -132,6 +136,8 @@ module.exports.SudokuSolving = (function () {
 
     /** 
     * Every field has 20 peers. Its units minus duplicate squares and the field itself
+    * @param {String} s Name of Square e.g. "A1"
+    * @return Array
     */
     function getPeersOfSquare(s){
         let units = getUnitsOfSquare(s);
@@ -149,6 +155,7 @@ module.exports.SudokuSolving = (function () {
     /**
     * Take board array with all 81 square models and parse their values to string.
     * Like the inital grid string we started with
+    * @return {String}
     */
     function parseBoardToString(){
         let boardString = '';
@@ -163,6 +170,7 @@ module.exports.SudokuSolving = (function () {
     /**
     * Take board array with all 81 square models and parse their values to array.
     * Like the inital grid string we started with
+    * @return {Array}
     */
     function parseBoardToArray(){
         let boardArray = [];
@@ -176,7 +184,7 @@ module.exports.SudokuSolving = (function () {
 
     /**
     * Use inital grid values and assign them to squares.
-    * @param Array
+    * @return {Array}
     */
     function mapGridToSquares(gridArray){
         var gridValues = squares.map(function(square,index){
@@ -192,6 +200,9 @@ module.exports.SudokuSolving = (function () {
 
     /**
     * Assign one number - which is the solution for a field - to the field
+    * @param {String} s Name of Square e.g. "A1"
+    * @param {Number} digit Number
+    * @param {squareIndex} digit Number
     */
     function assign(square, digit, squareIndex){
 
@@ -205,6 +216,10 @@ module.exports.SudokuSolving = (function () {
 
     /**
     * Delete all numbers from square except the solution. digit is exactly one number
+    * @param {String} s Name of Square e.g. "A1"
+    * @param {Number} digit Number
+    * @param {squareIndex} digit Number
+    * @return {Bool}
     */
     function eliminate(square, digit, squareIndex){
 
@@ -248,6 +263,8 @@ module.exports.SudokuSolving = (function () {
     
     /**
     * Helper to get the whole model of square for one squareName e.g. "A1"
+    * @param {String} s Name of Square e.g. "A1"
+    * @return {Object} foundSquareObj
     */
     function getModelForSquareName(squareName){
         var foundSquareObj = ""
