@@ -1,287 +1,346 @@
-module.exports.SudokuSolving = (function () {
+var SudokuSolving = function(grid) {
     
-    const digits   = '123456789';
-    const rows     = 'ABCDEFGHI';
-    const cols     = digits;
-    const squares  = cross(rows, cols);
+    this.digits   = '123456789';
+    this.rows     = 'ABCDEFGHI';
+    this.cols     = this.digits;
+    this.squares  = this.cross(this.rows, this.cols);
+    this.unitlist = this.generateUnitlist();
+    this.values   = {};
+    this.gridValues = {};
+    
+    this.initBoardValues();
+    
+    this.checkGrid(grid);
 
-    var unitlist = generateUnitlist();
+};
 
-    var board = squares.map(function(square,index){
-        let field = {
-            name : square,
-            value : digits,
-            key : index
+SudokuSolving.prototype.checkGrid = function(grid){
+    if(grid.length === 0 || grid.length !== 81){
+        throw new Error("Not a valid grid");
+    }
+
+    let gridArray;
+    if(grid instanceof Array){
+        gridArray = grid;
+    } else {
+        gridArray = grid.split("");
+    }
+    
+    this.initGridValues(gridArray);
+}
+
+SudokuSolving.prototype.cross = function(A,B){
+   let cross = [];
+    for(let i=0; i < A.length; i++){
+         for(let j=0; j < B.length; j++){
+             cross.push(A[i]+B[j]);
+         }
+    }
+    return cross; 
+}
+/**
+* Generates list of all Units
+* @return {Array}
+*/
+SudokuSolving.prototype.generateUnitlist = function(){
+
+    let colsArrays = [],
+        rowsArrays = [],
+        regionsArrays = [],
+        unitlist = [];
+
+    for(let i=0; i < this.cols.length; i++){
+        colsArrays.push(this.cross(this.rows,this.cols[i]))
+    }
+
+    for(let i=0; i < this.rows.length; i++){
+        rowsArrays.push(this.cross(this.rows[i],this.cols))
+    }
+
+    let regionsRowsIndex = ['ABC','DEF','GHI'];
+    let regionsColsIndex = ['123','456','789'];
+
+    for(let i=0; i < 3; i++){
+        for(let j=0; j < 3; j++){
+            regionsArrays.push(this.cross(regionsRowsIndex[i],regionsColsIndex[j]))
+        }
+    }
+    unitlist = colsArrays;
+    unitlist = unitlist.concat(rowsArrays);
+    unitlist = unitlist.concat(regionsArrays);
+
+    return unitlist;
+
+}
+
+/**
+* Main function to start the solving process.
+* Sudoku grid can be either String or Array of 81 numbers
+* @param {String | Array} grid 
+* @return {String | Array} solution
+*/
+SudokuSolving.prototype.parseGrid = function(){
+        var self = this;
+    
+        //var size = Object.keys(this.values).length;
+
+        self.squares.forEach(function(square){
+            if(self.digits.indexOf(self.gridValues[square]) !== -1){
+                self.assign(square, self.gridValues[square]);
+            }
+        })
+
+        if(this.isBoardSolved()) return true;
+        
+        if(this.search()) return true;
+    
+    return false;
+}
+
+/**
+* Use inital grid values and assign them to squares.
+* @return {Array}
+*/
+SudokuSolving.prototype.initGridValues = function(gridArray){
+    var self = this;
+
+    self.squares.forEach(function(square,index){
+        self.gridValues[square] = gridArray[index]
+    })
+}
+
+SudokuSolving.prototype.initBoardValues = function(){
+    var self = this;
+
+    self.squares.forEach(function(square){
+        self.values[square] = self.digits
+    })
+}
+
+
+SudokuSolving.prototype.isBoardSolved = function(){
+    var self = this;
+    let success = [];
+    self.squares.forEach(function(square){
+        
+        if(self.values[square].length !== 1){
+            success.push("false")
         };
-        return field;
-    });
+    })
 
-    /**
-    * Main function to start the solving process.
-    * Sudoku grid can be either String or Array of 81 numbers
-    * @param {String | Array} grid 
-    * @return {String | Array} solution
-    */
-    function solveGrid(grid){
-        let gridArray = [];
-        
-        if(!isGridValid(grid)){
-            throw new Error("Not a valid grid");
+    if(success.includes("false")){
+        return false;
+    }
+    return true; 
+}
+
+/**
+* Get the 3 unit arrays for square with 9 fields each
+* @param {String} s Name of Square e.g. "A1"
+* @return Array
+*/
+SudokuSolving.prototype.getUnitsOfSquare = function(square){
+    let unitsOfSquare = [];
+    this.unitlist.forEach(function(unit){
+        if(unit.includes(square)){
+            unitsOfSquare.push(unit);
         }
+    })
+    return unitsOfSquare;
+}
 
-        if(grid instanceof Array){
-            gridArray = grid;
-        } else {
-            gridArray = grid.split("");
-        }
+/**
+* Get the 20 peer squares for square
+* @param {String} s Name of Square e.g. "A1"
+* @return Array
+*/
+SudokuSolving.prototype.getPeersOfSquare = function(square){
+    let unitsOfSquare = this.getUnitsOfSquare(square);
 
-        // this is where we start. the board with 81 fields and the puzzle with the values from the grid variable
-        let gridValues = mapGridToSquares(gridArray);
-
-        // map grid values to the real board
-        gridValues.forEach(function(gridItem,index){
-            if(gridItem.value > 0){
-                assign(gridItem.name, gridItem.value,index);
+    let peersOfSquare = [];
+    unitsOfSquare.forEach(function(unit){
+        unit.forEach(function(el){
+            if(!peersOfSquare.includes(el) && el != square){
+                peersOfSquare.push(el);
             }
         })
-        
-        if(grid instanceof Array){
-            return parseBoardToArray();
-        } else {
-            return parseBoardToString();
-        }
-    } 
-    
-    /**
-    * Simple helper function if grid string contains 81 numbers
-    * @param {String | Array} grid 
-    * @return {Bool}   
-    */
-    function isGridValid(grid){
-        if(grid.length === 0 || grid.length !== squares.length){
-            return false;
-        }
+
+    })
+    return peersOfSquare;
+}
+
+/**
+* Assign one number - which is the solution for a field - to the field
+* @param {String} s Name of Square e.g. "A1"
+* @param {Number} digit Number
+* @param {squareIndex} digit Number
+*/
+SudokuSolving.prototype.assign = function(square, digit, DEBUG = false){
+
+    var self = this;    
+    // this is important. the temporary variable are all other digits, except the one we are looking for
+    var other_values = self.values[square].replace(digit,'');
+ 
+    let success = []
+    for(let i=0; i < other_values.length; i++){
+        success.push(self.eliminate(square,other_values[i],DEBUG));
+    }
+   
+    // if all(eliminate(values, s, d2) for d2 in other_values):
+    if(success.every(function(val){
+        return val !== false;
+    })){ 
         return true;
+    } else {
+        return false;
+    }
+
+    return true;
+}
+
+/**
+* Delete all numbers from square except the solution. digit is exactly one number
+* @param {String} s Name of Square e.g. "A1"
+* @param {Number} digit Number
+* @param {squareIndex} digit Number
+* @return {Bool}
+*/
+SudokuSolving.prototype.eliminate = function(square, digit, DEBUG = false){
+    var self = this; 
+    
+    if(DEBUG === true){
+        console.log(square+" "+digit);
+    }
+    
+    if(self.values[square].indexOf(digit) == -1){
+        return true;
+    }
+
+    self.values[square] = self.values[square].replace(digit,'');
+    
+    
+
+    if(self.values[square].length === 0){
+        return false;
+    }
+
+    if(self.values[square].length === 1){
+        let d2 = self.values[square];
+        let peers = self.getPeersOfSquare(square);
+
+        let success = []
         
-    }
-
-    /**
-    * Helper function. Cross product of 2 arrays or strings
-    * @param {String | Array} grid
-    * @return Array
-    */
-    function cross(A,B){
-        let cross = [];
-        for(let i=0; i < A.length; i++){
-             for(let j=0; j < B.length; j++){
-                 cross.push(A[i]+B[j]);
-             }
-        }
-        return cross;
-    }
-    
-    /**
-    * Generates list of all Units
-    * @return {Array}
-    */
-    function generateUnitlist(){
-
-        var colsArrays = [],
-            rowsArrays = [],
-            regionsArrays = [],
-            unitlist = [];
-
-        for(let i=0; i < cols.length; i++){
-            colsArrays.push(cross(rows,cols[i]))
-        }
-
-        for(let i=0; i < rows.length; i++){
-            rowsArrays.push(cross(rows[i],cols))
-        }
-
-        let regionsRowsIndex = ['ABC','DEF','GHI'];
-        let regionsColsIndex = ['123','456','789'];
-
-        for(let i=0; i < 3; i++){
-            for(let j=0; j < 3; j++){
-                regionsArrays.push(cross(regionsRowsIndex[i],regionsColsIndex[j]))
-            }
-        }
-        unitlist = colsArrays;
-        unitlist = unitlist.concat(rowsArrays);
-        unitlist = unitlist.concat(regionsArrays);
-
-        return unitlist;
-
-    }
-
-    /**
-    * Get the 3 unit arrays for square
-    * @param {String} s Name of Square e.g. "A1"
-    * @return Array
-    */
-    function getUnitsOfSquare(s){
-        let unitsOfSquare = [];
-        unitlist.forEach(function(unit){
-            if(unit.includes(s)){
-                let unitWithModel = [];
-                unit.forEach(function(unitItem){
-                    unitWithModel.push(getModelForSquareName(unitItem));
-                })
-                unitsOfSquare.push(unitWithModel);
-               }
+        peers.forEach(function(peer){
+            success.push(self.eliminate(peer, d2));
         })
-        return unitsOfSquare;
-    }
 
-    /** 
-    * Every field has 20 peers. Its units minus duplicate squares and the field itself
-    * @param {String} s Name of Square e.g. "A1"
-    * @return Array
-    */
-    function getPeersOfSquare(s){
-        let units = getUnitsOfSquare(s);
-        let peers = [];
-        units.forEach(function(unit){
-            unit.forEach(function(el){
-                if(!peers.includes(el) && el.name !== s){
-                   peers.push(el);
-                }
-            })
-        })
-        return peers;
-    }
-
-    /**
-    * Take board array with all 81 square models and parse their values to string.
-    * Like the inital grid string we started with
-    * @return {String}
-    */
-    function parseBoardToString(){
-        let boardString = '';
-
-        board.forEach(function(square){
-            boardString += square.value;
-        });
-
-        return boardString;
-    }
-    
-    /**
-    * Take board array with all 81 square models and parse their values to array.
-    * Like the inital grid string we started with
-    * @return {Array}
-    */
-    function parseBoardToArray(){
-        let boardArray = [];
-
-        board.forEach(function(square){
-            boardArray.push(parseInt(square.value));
-        });
-
-        return boardArray;
-    }
-
-    /**
-    * Use inital grid values and assign them to squares.
-    * @return {Array}
-    */
-    function mapGridToSquares(gridArray){
-        var gridValues = squares.map(function(square,index){
-            let squareModel = {
-                name : square,
-                value : gridArray[index],
-                key : index
-            };
-            return squareModel;
-        });
-        return gridValues;
-    }
-
-    /**
-    * Assign one number - which is the solution for a field - to the field
-    * @param {String} s Name of Square e.g. "A1"
-    * @param {Number} digit Number
-    * @param {squareIndex} digit Number
-    */
-    function assign(square, digit, squareIndex){
-
-        // this is important. the temporary variable are all other digits, except the one we are looking for
-        var other_values = board[squareIndex].value.replace(digit,'');
-
-        for(let i=0; i<other_values.length; i++){
-            eliminate(square,other_values[i],squareIndex)
-        }
-    }
-
-    /**
-    * Delete all numbers from square except the solution. digit is exactly one number
-    * @param {String} s Name of Square e.g. "A1"
-    * @param {Number} digit Number
-    * @param {squareIndex} digit Number
-    * @return {Bool}
-    */
-    function eliminate(square, digit, squareIndex){
-
-        if(board[squareIndex].value.indexOf(digit) === -1){
-            return;
-        }
-
-        board[squareIndex].value = board[squareIndex].value.replace(digit,'');
-
-        if(board[squareIndex].value.length === 1){
-            let d2 = board[squareIndex].value;
-            let peers = getPeersOfSquare(square);
-
-            peers.forEach(function(peer){
-                eliminate(peer.name, d2, peer.key);
-            })
+        // if not all(eliminate(values, s2, d2) for s2 in peers[s]):
+        if(!success.every(function(val){
+            return val !== false;
+        })){ 
             return false;
         }
 
-        /**
-        * Now iterate through all units of the square. Delete the digit from them
-        */
-        let unitsOfSquare = getUnitsOfSquare(square);
-        var dplaces = [];
-        unitsOfSquare.forEach(function(unit){
-            dplaces = [];
-            unit.forEach(function(unitSquare){
-                if(unitSquare.value.indexOf(digit) !== -1){
-                    dplaces.push(unitSquare);
-                }
-            })
-            // only one possible solution
-            if(dplaces.length === 1){
-                assign(dplaces[0].name, digit, dplaces[0].key);
-            }
-        })
-
-        return;
-
+        return true;
     }
     
     /**
-    * Helper to get the whole model of square for one squareName e.g. "A1"
-    * @param {String} s Name of Square e.g. "A1"
-    * @return {Object} foundSquareObj
+    * Now iterate through all units of the square. Delete the digit from them
     */
-    function getModelForSquareName(squareName){
-        var foundSquareObj = ""
-        board.every(function(square){
-            if(square.name === squareName){
-                foundSquareObj = square
-                return false;
+    let unitsOfSquare = self.getUnitsOfSquare(square);
+    var dplaces = [];
+    unitsOfSquare.forEach(function(unit){
+        dplaces = [];
+        unit.forEach(function(unitSquare){
+            if(self.values[unitSquare].indexOf(digit) !== -1){
+                dplaces.push(unitSquare);
             }
+        })
+        // only one possible solution
+        if(dplaces.length === 1){
+            self.assign(dplaces[0], digit);
+        }
+    })
+
+    return true;
+}
+
+
+SudokuSolving.prototype.search = function(values){
+    var self = this;
+    if(self.isBoardSolved()) return true;
+
+    var smallestElArray =  self.getElWithMinValueOfUnsolvedBoard();
+
+    // before we modified the original values. from here on we try different solutions
+    // if they return false, we start again with the state of the board before the guessing
+
+    // board is an object. Array.slice() will not work here
+    var boardBeforeTrying = JSON.parse(JSON.stringify(self.values));
+    
+    let assignReturn;
+    let success = [];
+    
+
+    for(let i = 0; i < smallestElArray[1].length; i++){
+        
+        assignReturn = self.assign(smallestElArray[0],smallestElArray[1][i], true);
+        success.push( assignReturn );
+        
+        if(assignReturn === false){
+            // Resetting board to the state before we tried out
+            self.values = JSON.parse(JSON.stringify(boardBeforeTrying));
+        } else {
             return true;
-        })
-        return foundSquareObj; 
+        }
     }
+
+    return false;
+}
+
+ /**
+* Helper for search to get the field with the smallest possible solutions.
+*/
+SudokuSolving.prototype.getElWithMinValueOfUnsolvedBoard = function(){
+        var self = this;
+        let smallest = 0;
+        let smallestEl;
     
-    /**
-    * Revealing module pattern. public access for method parseGrid
-    */
-    return {
-        solveGrid : solveGrid
-    };
-})();
+        self.squares.forEach(function(square){
+    
+            let value = self.values[square];
+            let len = value.length;
+            
+            // if value is down to one digit, it is already solved
+            if(len > 1){
+                if(smallest === 0){
+                    smallest = len;
+                    smallestElArray = [square, value];
+                } else if(len < smallest){
+                    smallest = len;
+                    smallestElArray = [square, value];
+                }
+            }
+        })
+        return smallestElArray;
+    }
+
+
+SudokuSolving.prototype.solve = function(){
+    var self = this;
+    if(self.parseGrid()){
+        return self.valuesToString();
+    }
+    return false;
+}
+
+SudokuSolving.prototype.valuesToString = function(){
+    var self = this;
+    let valuesString = "";
+    self.squares.forEach(function(square){
+        valuesString += self.values[square];
+    })
+    return valuesString;
+}
+
+module.exports = SudokuSolving
