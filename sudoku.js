@@ -7,13 +7,28 @@ var SudokuSolving = function(grid) {
     this.unitlist = this.generateUnitlist();
     this.values   = {};
     this.gridValues = {};
+    this.excludeFromSmallestSearch = [];
     
     this.initBoardValues();
-    
     this.checkGrid(grid);
 
 };
 
+/**
+* Main function to be called to solve a grid
+* @return {Bool|String}  
+*/
+SudokuSolving.prototype.solve = function(){
+    var self = this;
+    if(self.parseGrid() === true){
+        return self.valuesToString();
+    }
+    return false;
+}
+
+/**
+* Validates input grid and inits the gridValues  
+*/
 SudokuSolving.prototype.checkGrid = function(grid){
     if(grid.length === 0 || grid.length !== 81){
         throw new Error("Not a valid grid");
@@ -81,8 +96,6 @@ SudokuSolving.prototype.generateUnitlist = function(){
 */
 SudokuSolving.prototype.parseGrid = function(){
         var self = this;
-    
-        //var size = Object.keys(this.values).length;
 
         self.squares.forEach(function(square){
             if(self.digits.indexOf(self.gridValues[square]) !== -1){
@@ -92,9 +105,15 @@ SudokuSolving.prototype.parseGrid = function(){
 
         if(this.isBoardSolved()) return true;
         
-        if(this.search()) return true;
+        // We need one clone of the values before the search process starts
+        // until here there are only correct values
+        self.boardBeforeTrying = JSON.parse(JSON.stringify(self.values));
+        
+        while (true){
+            if(self.search() === true) break; 
+        }
     
-    return false;
+    return true;
 }
 
 /**
@@ -109,6 +128,9 @@ SudokuSolving.prototype.initGridValues = function(gridArray){
     })
 }
 
+/**
+* Set values for squares
+*/
 SudokuSolving.prototype.initBoardValues = function(){
     var self = this;
 
@@ -117,18 +139,20 @@ SudokuSolving.prototype.initBoardValues = function(){
     })
 }
 
-
+/**
+* Helper to check if board is solved. Every square is one solution
+*/
 SudokuSolving.prototype.isBoardSolved = function(){
     var self = this;
     let success = [];
     self.squares.forEach(function(square){
         
         if(self.values[square].length !== 1){
-            success.push("false")
+            success.push(false)
         };
     })
 
-    if(success.includes("false")){
+    if(success.includes(false)){
         return false;
     }
     return true; 
@@ -175,27 +199,24 @@ SudokuSolving.prototype.getPeersOfSquare = function(square){
 * @param {Number} digit Number
 * @param {squareIndex} digit Number
 */
-SudokuSolving.prototype.assign = function(square, digit, DEBUG = false){
+SudokuSolving.prototype.assign = function(square, digit){
+    var self = this; 
 
-    var self = this;    
-    // this is important. the temporary variable are all other digits, except the one we are looking for
     var other_values = self.values[square].replace(digit,'');
- 
+    
     let success = []
     for(let i=0; i < other_values.length; i++){
-        success.push(self.eliminate(square,other_values[i],DEBUG));
+        success.push(self.eliminate(square,other_values[i]));
     }
-   
+    
     // if all(eliminate(values, s, d2) for d2 in other_values):
     if(success.every(function(val){
-        return val !== false;
+        return val === true;
     })){ 
         return true;
     } else {
         return false;
     }
-
-    return true;
 }
 
 /**
@@ -205,26 +226,33 @@ SudokuSolving.prototype.assign = function(square, digit, DEBUG = false){
 * @param {squareIndex} digit Number
 * @return {Bool}
 */
-SudokuSolving.prototype.eliminate = function(square, digit, DEBUG = false){
+SudokuSolving.prototype.eliminate = function(square, digit){
     var self = this; 
     
-    if(DEBUG === true){
-        console.log(square+" "+digit);
-    }
-    
-    if(self.values[square].indexOf(digit) == -1){
+    //    if d not in values[s]:
+    //    return values ## Already eliminated
+    if(self.values[square].indexOf(digit) === -1){
         return true;
     }
 
+    // my add one to prevent empty values
+    if(self.values[square].length === 0){
+        //return false;
+    }
+    
     self.values[square] = self.values[square].replace(digit,'');
     
-    
 
+    // ## (1) If a square s is reduced to one value d2, then eliminate d2 from the peers.
+    // if len(values[s]) == 0:
+    //    return False
     if(self.values[square].length === 0){
         return false;
     }
-
-    if(self.values[square].length === 1){
+    
+    //elif len(values[s]) == 1:
+    //    d2 = values[s]
+    if(self.values[square].length == 1){
         let d2 = self.values[square];
         let peers = self.getPeersOfSquare(square);
 
@@ -236,23 +264,20 @@ SudokuSolving.prototype.eliminate = function(square, digit, DEBUG = false){
 
         // if not all(eliminate(values, s2, d2) for s2 in peers[s]):
         if(!success.every(function(val){
-            return val !== false;
+            return val === true;
         })){ 
             return false;
         }
-
-        return true;
     }
     
-    /**
-    * Now iterate through all units of the square. Delete the digit from them
-    */
+    //Now iterate through all units of the square. Delete the digit from them
     let unitsOfSquare = self.getUnitsOfSquare(square);
     var dplaces = [];
     unitsOfSquare.forEach(function(unit){
         dplaces = [];
         unit.forEach(function(unitSquare){
-            if(self.values[unitSquare].indexOf(digit) !== -1){
+
+            if(self.values[unitSquare].indexOf(digit) > -1){
                 dplaces.push(unitSquare);
             }
         })
@@ -265,36 +290,35 @@ SudokuSolving.prototype.eliminate = function(square, digit, DEBUG = false){
     return true;
 }
 
-
-SudokuSolving.prototype.search = function(values){
+/**
+* Search function if grid can´t be solved by assigning
+*/
+SudokuSolving.prototype.search = function(){
     var self = this;
     if(self.isBoardSolved()) return true;
 
-    var smallestElArray =  self.getElWithMinValueOfUnsolvedBoard();
-
     // before we modified the original values. from here on we try different solutions
     // if they return false, we start again with the state of the board before the guessing
-
-    // board is an object. Array.slice() will not work here
-    var boardBeforeTrying = JSON.parse(JSON.stringify(self.values));
-    
+    self.values = JSON.parse(JSON.stringify(self.boardBeforeTrying));
+    var smallestElArray =  self.getElWithMinValueOfUnsolvedBoard();
+ 
     let assignReturn;
     let success = [];
     
-
     for(let i = 0; i < smallestElArray[1].length; i++){
         
         assignReturn = self.assign(smallestElArray[0],smallestElArray[1][i], true);
         success.push( assignReturn );
-        
         if(assignReturn === false){
             // Resetting board to the state before we tried out
-            self.values = JSON.parse(JSON.stringify(boardBeforeTrying));
-        } else {
-            return true;
+            self.values = JSON.parse(JSON.stringify(self.boardBeforeTrying));
         }
     }
 
+    if(self.isBoardSolved()) return true;
+        
+    self.excludeFromSmallestSearch.push(smallestElArray[0]);
+    
     return false;
 }
 
@@ -304,15 +328,15 @@ SudokuSolving.prototype.search = function(values){
 SudokuSolving.prototype.getElWithMinValueOfUnsolvedBoard = function(){
         var self = this;
         let smallest = 0;
-        let smallestEl;
+        let smallestElArray = false;
     
         self.squares.forEach(function(square){
-    
+            
             let value = self.values[square];
             let len = value.length;
             
             // if value is down to one digit, it is already solved
-            if(len > 1){
+            if(len > 1 && !self.excludeFromSmallestSearch.includes(square)){
                 if(smallest === 0){
                     smallest = len;
                     smallestElArray = [square, value];
@@ -322,18 +346,14 @@ SudokuSolving.prototype.getElWithMinValueOfUnsolvedBoard = function(){
                 }
             }
         })
+    
         return smallestElArray;
     }
 
-
-SudokuSolving.prototype.solve = function(){
-    var self = this;
-    if(self.parseGrid()){
-        return self.valuesToString();
-    }
-    return false;
-}
-
+/**
+* Parses all values to single string
+* @return {String}
+*/
 SudokuSolving.prototype.valuesToString = function(){
     var self = this;
     let valuesString = "";
